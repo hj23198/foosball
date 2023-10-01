@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "crypto-js": "^4.1.1",
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.5",
+    "sanitize": "^2.1.2"
+  }
+}

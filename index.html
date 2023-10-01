@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <body onload="loadUserData()"> <!--onload="get()"-->
+        <a href="/login">Login</a>
+        <br>
+        <a href="/register">Register</a>
+        <br>
+        <a href="/leaderboard">Leaderboard</a>
+        <br>
+        <a href="/loggame">Submit a game</a>
+
+        <form action="/signout" method="post">
+            <button type="submit">Sign out</button>
+        </form>
+
+        <script>
+            function loadUserData() {
+                fetch("/profileinfo")
+                    .then(res => {
+                        return res.json();
+                    }).then(data => {
+                        if (data == "") {
+                            return
+                        } else {
+                            var usern = data[0]
+                            var elo = data[1]
+                            var pending = data[2]
+                            
+                            var profile = document.getElementById("profile")
+                            var tag = document.createElement("p")
+                            tag.innerText = "Username: " + usern
+                            profile.appendChild(tag)
+                            var tag = document.createElement("p")
+                            tag.innerText = "Current ELO: " + elo
+                            profile.appendChild(tag)
+                        }
+                    })
+            }
+        </script>
+
+        <div id="profile">
+
+        </div>
+
+
+    </body>
+</html>
