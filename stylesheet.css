@@ -1,0 +1,11 @@
+.center {
+    text-align: center;
+    width: "auto";
+    height: "auto";
+    font-size: 30px;
+    font-size: 3.5vw;
+  }
+
+button {
+    font-size: 30px
+}

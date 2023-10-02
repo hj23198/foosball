@@ -18,18 +18,30 @@ var database = {
     "active_tokens": {},
     "ip_list": {},
     "past_games": {},
+    "game_id":0
 };
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/index.html'));
 })
 
+app.get("/stylesheet", (req, res) => {
+    res.sendFile(path.join(__dirname, "stylesheet.css"))
+})
+
 app.get('/register', (req, res) => {
+    if ("token" in req.cookies) {
+        if (req.cookies["token"] in database["active_tokens"]) {
+            res.sendFile(path.join(__dirname, '/index.html'));
+            return
+        }
+    }
     res.sendFile(path.join(__dirname, '/register.html'))
 })
 
 app.post('/register', (req, res) => {
     var ip = req.ip;
+
     if (ip in database["ip_list"]) {
         res.send("You appear to have already registered") //TODO update
         return
@@ -49,7 +61,7 @@ app.post('/register', (req, res) => {
         "password":crypto.MD5(req.body.passw).toString(),
         "ip": ip,
         "elo": 1500,
-        "pending_games": [],
+        "pending_games": {},
     }
     var token = crypto.MD5(Math.random().toString(36))
     database["active_tokens"][token] = usern
@@ -62,10 +74,18 @@ app.post('/register', (req, res) => {
 })
 
 app.get('/login', (req, res) => {
+    if ("token" in req.cookies) {
+        if (req.cookies["token"] in database["active_tokens"]) {
+            res.sendFile(path.join(__dirname, '/index.html'));
+            return
+        }
+    }
     res.sendFile(path.join(__dirname, '/login.html'))
 })
 
 app.post('/login', (req, res) => {
+    //TODO add login cd 
+    //TODO add ip to account if logging on multiple devices
     var usern = req.body.user
     if (usern in database["users"]) {
         var pass = crypto.MD5(req.body.pass).toString()
@@ -122,26 +142,57 @@ app.get('/profileinfo', (req, res) => {
 })
 
 app.post('/loggame', (req, res) => {
+    //TODO prevent logging games against self
     var usern = database["active_tokens"][req.cookies.token];
     var userelo = database["users"][usern]["elo"]
     var opponent = req.body.opponent;
+
     if (!(opponent in database["users"])) {
         res.send("Opponent does not appear to exist") //TODO
     } else {
+        var winner;
+        if (req.body.winner == "true") {
+            winner == usern
+        } else {
+            winner = opponent
+        }
+
+        if (Object.keys(database["users"][opponent]["pending_games"]).length == 1) {
+            res.send("Opponent already has a pending game")
+            return
+        }
+
         opponelo = database["users"][opponent]["elo"]
-        database["users"][opponent][pending_games].push({
+        database["users"][opponent]["pending_games"] = {
             "player1":usern,
             "player1elo":userelo,
             "player2":opponent,
-            "player2elo":opponelo
-        })
+            "player2elo":opponelo,
+            "winner":winner,
+            "game_id": database["game_id"]
+        }
+        database["game_id"] += 1
         res.send("Sent game confirmation request!")
+        console.log("[Game Submission] p1: " + usern + ", p2: " + opponent + ", p1elo: ", userelo + ", p2elo:", + opponelo + ", winner: " + winner)
     }
 
 })
 
 app.post('/confirmgame', (req, res) => {
+    console.log("Confirm request rec")
+})
 
+app.post('/denygame', (req, res) => {
+    if (!(req.cookies.token in database["active_tokens"])) {
+        res.sendFile(path.join(__dirname, '/index.html'))
+        return
+    }
+
+    var user = database["active_tokens"][req.cookies.token]
+    console.log("[Game Request] " + user + " denied " + database["users"][user]["pending_games"]["player1"] + "'s game request")
+    database["users"][user]["pending_games"] = {}
+    res.sendFile(path.join(__dirname, '/index.html'))
+    return
 })
 
 app.get('/leaderboard', (req, res) => {

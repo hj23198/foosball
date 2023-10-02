@@ -1,17 +1,52 @@
 <!DOCTYPE html>
 <html>
-    <body onload="loadUserData()"> <!--onload="get()"-->
-        <a href="/login">Login</a>
-        <br>
-        <a href="/register">Register</a>
-        <br>
-        <a href="/leaderboard">Leaderboard</a>
-        <br>
-        <a href="/loggame">Submit a game</a>
-
+    <head>
+        <link rel="stylesheet" href="stylesheet">
+    </head>
+    <body class="center" onload="loadUserData()">
+        <!--TODO replace with js-->
         <form action="/signout" method="post">
             <button type="submit">Sign out</button>
         </form>
+
+
+        <div id="nav">
+        </div>
+
+        <br>
+
+        <div id="profile">
+        </div>
+
+        <br>
+
+        <div id="subgame">
+        </div>
+
+        <br>
+
+        <div id="pending">
+        </div>
+
+        <div id="leaderboard">
+            <a href="/leaderboard">Leaderboard</a>
+        </div>
+
+        
+
+        <form action="/loggame" method="post">
+            <h2>Opponent Username</h2>
+            <br>
+            <input type="text" id="opponent" name="opponent">
+            <br>
+            <h2>Did you win?</h2>
+            <br>
+            <input type="checkbox" id="winner" name="winner">
+            <br>
+            <button type="submit">Submit Game</button>
+        </form>
+
+
 
         <script>
             function loadUserData() {
@@ -20,28 +55,94 @@
                         return res.json();
                     }).then(data => {
                         if (data == "") {
-                            return
+                            buildLogin()
                         } else {
-                            var usern = data[0]
-                            var elo = data[1]
-                            var pending = data[2]
-                            
-                            var profile = document.getElementById("profile")
-                            var tag = document.createElement("p")
-                            tag.innerText = "Username: " + usern
-                            profile.appendChild(tag)
-                            var tag = document.createElement("p")
-                            tag.innerText = "Current ELO: " + elo
-                            profile.appendChild(tag)
+                            buildProfile(data)
                         }
                     })
             }
+
+            function buildLogin() {
+                var nav = document.getElementById("nav")
+
+                var register = document.createElement("a")
+                register.href = "/register"
+                register.innerHTML = "Register"
+
+                nav.appendChild(register)
+                nav.appendChild(document.createElement("br"))
+
+                var login = document.createElement("a")
+                login.href = "/login"
+                login.innerHTML = "Login"
+
+                nav.appendChild(login)
+                nav.appendChild(document.createElement("br"))
+                return
+            }
+
+            function buildProfile(data) {
+                var usern = data[0]
+                var elo = data[1]
+                var pending = data[2]
+
+                console.log(data)
+                
+                var profile = document.getElementById("profile")
+                var tag = document.createElement("h2")
+                tag.innerText = "Username: " + usern
+                profile.appendChild(tag)
+                var tag = document.createElement("h2")
+                tag.innerText = "Current ELO: " + elo
+                profile.appendChild(tag)
+                
+                if (Object.keys(pending).length == 0) {
+                    console.log("Did not get game data")
+                    return
+                } else {
+                    var pendingnode = document.getElementById("pending")
+                    var head = document.createElement("h2")
+                    head.innerHTML = "Game confirmation request:"
+                    pendingnode.appendChild(head)
+
+                    var opponentname = pending["player2"]
+                    var winner = pending["winner"]
+                    
+                    var op = document.createElement("h2")
+                    op.innerHTML = "Opponent Name: " + opponentname
+                    pendingnode.appendChild(op)
+
+                    var win = document.createElement("h2")
+                    win.innerHTML = "Winner: " + winner
+                    pendingnode.appendChild(win)
+
+                    var form = document.createElement("form")
+                    form.method = "post"
+                    form.action = "/confirmgame"
+
+                    var confirm = document.createElement("button")
+                    confirm.innerHTML = "Accept"
+                    confirm.type = "submit"
+                    confirm.id = "confirm"
+                    form.appendChild(confirm)
+
+                    pendingnode.appendChild(form)
+                    pendingnode.appendChild(document.createElement("br"))
+
+                    var form2 = document.createElement("form")
+                    form2.method = "post"
+                    form2.action = "/denygame"
+
+                    var deny = document.createElement("button")
+                    deny.innerHTML = "Decline"
+                    deny.type = "submit"
+                    deny.id = "deny"
+                    form2.appendChild(deny)
+                    pendingnode.appendChild(form2)
+                }
+            }
+
         </script>
-
-        <div id="profile">
-
-        </div>
-
 
     </body>
 </html>
