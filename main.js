@@ -12,13 +12,21 @@ app.use(require('sanitize').middleware);
 
 var PORT = 3000;
 
+const K_FACTOR = 32;
+
 //TODO don't do this
 var database = {
     "users": {},
     "active_tokens": {},
     "ip_list": {},
     "past_games": {},
-    "game_id":0
+    "leaderboard":{
+        "is_cache":false,
+        "cache": {
+            "users":[],
+            "elo":[],
+        }
+    }
 };
 
 app.get('/', (req, res) => {
@@ -41,6 +49,13 @@ app.get('/register', (req, res) => {
 
 app.post('/register', (req, res) => {
     var ip = req.ip;
+
+    if ("token" in req.cookies) {
+        if (req.cookies["token"] in database["active_tokens"]) {
+            res.sendFile(path.join(__dirname, '/index.html'));
+            return
+        }
+    }
 
     if (ip in database["ip_list"]) {
         res.send("You appear to have already registered") //TODO update
@@ -84,6 +99,12 @@ app.get('/login', (req, res) => {
 })
 
 app.post('/login', (req, res) => {
+    if ("token" in req.cookies) {
+        if (req.cookies["token"] in database["active_tokens"]) {
+            res.sendFile(path.join(__dirname, '/index.html'));
+            return
+        }
+    }
     //TODO add login cd 
     //TODO add ip to account if logging on multiple devices
     var usern = req.body.user
@@ -149,6 +170,8 @@ app.post('/loggame', (req, res) => {
 
     if (!(opponent in database["users"])) {
         res.send("Opponent does not appear to exist") //TODO
+    } else if (database["active_tokens"][req.cookies.token] == req.body.opponent) {
+        res.send("No.")
     } else {
         var winner;
         if (req.body.winner == "true") {
@@ -169,7 +192,6 @@ app.post('/loggame', (req, res) => {
             "player2":opponent,
             "player2elo":opponelo,
             "winner":winner,
-            "game_id": database["game_id"]
         }
         database["game_id"] += 1
         res.send("Sent game confirmation request!")
@@ -179,7 +201,41 @@ app.post('/loggame', (req, res) => {
 })
 
 app.post('/confirmgame', (req, res) => {
-    console.log("Confirm request rec")
+    if (!(req.cookies.token in database["active_tokens"])) {
+        res.sendFile(path.join(__dirname, '/index.html'))
+        return
+    }
+
+    var name = database["active_tokens"][req.cookies.token]
+    var game_data = database["users"][name]["pending_games"]
+    var winner = game_data["winner"]
+    console.log("[Game Request] " + name + " accepted " + database["users"][name]["pending_games"]["player1"] + "'s game request")
+    var p1 = game_data["player1"]
+    var p1elo = game_data["player1elo"]
+    var p2 = game_data["player2"]
+    var p2elo = game_data["player2elo"]
+
+    if (p1 == winner) {
+        var p1_a = 1;
+        var p2_a = 0
+    } else {
+        var p1_a = 0;
+        var p2_a = 1
+    }
+
+    var player1_win_chance = 1 / (1 + Math.pow(10, ((p2elo-p1elo)/400)))
+    var player2_win_chance = 1 / (1 + Math.pow(10, ((p1elo-p2elo)/400)))
+
+    var new_p1_elo = p1elo + K_FACTOR*(p1_a-player1_win_chance)
+    var new_p2_elo = p2elo + K_FACTOR*(p2_a-player2_win_chance)
+
+    console.log("[ELO] " + p1 + "'s elo has been updated to " + String(new_p1_elo) + " from " + String(p1elo))
+    console.log("[ELO] " + p2 + "'s elo has been updated to " + String(new_p2_elo) + " from " + String(p2elo))
+
+    database["users"][p1]["elo"] = new_p1_elo
+    database["users"][p2]["elo"] = new_p2_elo
+    database["users"][name]["pending_games"] = {}
+    res.sendFile(path.join(__dirname, '/index.html'))
 })
 
 app.post('/denygame', (req, res) => {
@@ -196,9 +252,15 @@ app.post('/denygame', (req, res) => {
 })
 
 app.get('/leaderboard', (req, res) => {
+    var elo = []
+    var user = Object.keys(database["users"])
+    var len = user.length
+    for (var i = 0; i < len; i++) {
+        elo.push(database[user[i]]["elo"])
+    }
+
 
 })
-
 
 app.listen(PORT);
 console.log('Server running on http://127.0.0.1:' + PORT);
