@@ -14,27 +14,37 @@ var PORT = 3000;
 
 const K_FACTOR = 32;
 
-//TODO don't do this
-var database = {
-    "users": {},
-    "active_tokens": {},
-    "ip_list": {},
-    "past_games": {},
-    "leaderboard":{
-        "is_cache":false,
-        "cache": {
-            "users":[],
-            "elo":[],
-        }
+function updateData() {
+    fs.writeFileSync(
+        path.join(__dirname, "data.json"),
+        JSON.stringify(database)
+      );
     }
-};
+
+var database = fs.readFileSync(
+    path.join(__dirname, "/data.json")
+  );
+database = JSON.parse(database);
+// var database = {
+//     "users": {},
+//     "active_tokens": {},
+//     "ip_list": {},
+//     "past_games": {},
+//     "leaderboard":{
+//         "is_cache":false,
+//         "cache": {
+//             "users":[],
+//             "elo":[],
+//         }
+//     }
+// };
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/index.html'));
 })
 
 app.get("/stylesheet", (req, res) => {
-    res.sendFile(path.join(__dirname, "stylesheet.css"))
+    res.sendFile(path.join(__dirname, "/stylesheet.css"))
 })
 
 app.get('/register', (req, res) => {
@@ -44,7 +54,9 @@ app.get('/register', (req, res) => {
             return
         }
     }
+    
     res.sendFile(path.join(__dirname, '/register.html'))
+    database["leaderboard"]["is_cache"] = true
 })
 
 app.post('/register', (req, res) => {
@@ -86,6 +98,7 @@ app.post('/register', (req, res) => {
     res.sendFile(path.join(__dirname, '/index.html'));
     console.log("[User Registration] " + req.body.user)
     database["ip_list"][ip] = true
+    updateData()
 })
 
 app.get('/login', (req, res) => {
@@ -116,6 +129,7 @@ app.post('/login', (req, res) => {
             res.cookie('token', token.toString())
             console.log("[Login Success] " + usern)
             res.sendFile(path.join(__dirname, '/index.html'));
+            updateData()
         } else {
             res.send("Login Failed") //TODO
             console.log("[Login Fail] " + usern)
@@ -136,6 +150,7 @@ app.post('/signout', (req, res) => {
 
             res.sendFile(path.join(__dirname, '/index.html')); //TODO
             console.log("[Logout Success] " + req.cookies.usern)
+            updateData()
         } else {
             res.send("Logout unsuccessful. Thats impressive.") //TODO
             console.log("[Logout Fail] " + req.cookies.usern)
@@ -163,7 +178,6 @@ app.get('/profileinfo', (req, res) => {
 })
 
 app.post('/loggame', (req, res) => {
-    //TODO prevent logging games against self
     var usern = database["active_tokens"][req.cookies.token];
     var userelo = database["users"][usern]["elo"]
     var opponent = req.body.opponent;
@@ -196,6 +210,7 @@ app.post('/loggame', (req, res) => {
         database["game_id"] += 1
         res.send("Sent game confirmation request!")
         console.log("[Game Submission] p1: " + usern + ", p2: " + opponent + ", p1elo: ", userelo + ", p2elo:", + opponelo + ", winner: " + winner)
+        updateData()
     }
 
 })
@@ -205,7 +220,8 @@ app.post('/confirmgame', (req, res) => {
         res.sendFile(path.join(__dirname, '/index.html'))
         return
     }
-
+    
+    database["leaderboard"]["is_cache"] = false
     var name = database["active_tokens"][req.cookies.token]
     var game_data = database["users"][name]["pending_games"]
     var winner = game_data["winner"]
@@ -236,6 +252,7 @@ app.post('/confirmgame', (req, res) => {
     database["users"][p2]["elo"] = new_p2_elo
     database["users"][name]["pending_games"] = {}
     res.sendFile(path.join(__dirname, '/index.html'))
+    updateData()
 })
 
 app.post('/denygame', (req, res) => {
@@ -248,18 +265,34 @@ app.post('/denygame', (req, res) => {
     console.log("[Game Request] " + user + " denied " + database["users"][user]["pending_games"]["player1"] + "'s game request")
     database["users"][user]["pending_games"] = {}
     res.sendFile(path.join(__dirname, '/index.html'))
+    updateData()
     return
 })
 
 app.get('/leaderboard', (req, res) => {
-    var elo = []
-    var user = Object.keys(database["users"])
-    var len = user.length
-    for (var i = 0; i < len; i++) {
-        elo.push(database[user[i]]["elo"])
+    res.sendFile(path.join(__dirname, "/leaderboard.html"))
+})
+
+app.post('/leaderboard', (req, res) => {
+    if (database["leaderboard"]["is_cache"]) {
+        res.json(database["leaderboard"]["cache"])
+        return
+    } else {
+        var elo = []
+        var user = Object.keys(database["users"])
+        var len = user.length
+        for (var i = 0; i < len; i++) {
+            elo.push(database[user[i]]["elo"])
+        }
+        res.json({
+            "users":user,
+            "elo":elo
+        })
+        database["leaderboard"]["cache"]["users"] = user
+        database["leaderboard"]["cache"]["elo"] = elo
+        database["leaderboard"]["is_cache"] = true
+        return
     }
-
-
 })
 
 app.listen(PORT);
