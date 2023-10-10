@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="stylesheet">
+    </head>
+
+    <body onload="loadLeaderboard()">
+        <div id="leaderboard">
+
+        </div>
+
+    </body>
+
+    <script>
+        function loadLeaderboard() {
+            fetch("/leaderboard")
+            .then(res => {
+                return res.json();
+            }).then(data => {
+                var users = data["users"]
+                var elo = data["elo"]
+                
+
+
+
+            })
+        }
+    </script>
+</html>
