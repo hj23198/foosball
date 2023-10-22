@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(require('sanitize').middleware);
 
-var PORT = 3000;
+var PORT = 8080;
 
 const K_FACTOR = 32;
 
@@ -56,7 +56,6 @@ app.get('/register', (req, res) => {
     }
     
     res.sendFile(path.join(__dirname, '/register.html'))
-    database["leaderboard"]["is_cache"] = true
 })
 
 app.post('/register', (req, res) => {
